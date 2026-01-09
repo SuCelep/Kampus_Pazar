@@ -1,0 +1,68 @@
+# --- MEVCUT LİSTENDEKİLER ---
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ / Android Studio related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# VS Code
+.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+
+# Symbolication & Obfuscation
+app.*.symbols
+app.*.map.json
+
+# --- EKLENMESİ GEREKEN EKSİKLER (BUNLAR OLMADAN OLMAZ) ---
+
+# 1. Android SDK Yolu (Çok Kritik - Her PC'de farklıdır)
+local.properties
+
+# 2. Android Studio Derleme Dosyaları (Gereksiz Şişkinlik)
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/**/GeneratedPluginRegistrant.java
+
+# 3. iOS Bağımlılıkları (CocoaPods - Çok yer kaplar)
+**/ios/Pods/
+**/ios/.symlinks/
+**/ios/Flutter/flutter_assets/
+**/ios/Flutter/Generated.xcconfig
+
+# 4. Mac Gereksizleri
+.DS_Store
+
+# 5. Anahtar ve Güvenlik Dosyaları (Private olsa bile yükleme)
+*.jks
+*.keystore
+key.properties
+
+# 6. Firebase Dosyaları (Eğer kullanıyorsan bunları gizle)
+google-services.json
+GoogleService-Info.plist
