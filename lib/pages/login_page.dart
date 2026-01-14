@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart'; // FirebaseAuth erişimi için gerekli
 import '../services/auth_service.dart';
 import 'register_page.dart';
 import 'home_page.dart';
@@ -72,31 +73,75 @@ class _LoginPageState extends State<LoginPage> {
                   height: 55,
                   child: ElevatedButton(
                     onPressed: () async {
-                      if (_emailController.text.isEmpty ||
-                          _passwordController.text.isEmpty) {
+                      if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                              content: Text("Lütfen alanları doldur.")),
+                          const SnackBar(content: Text("Lütfen alanları doldur.")),
                         );
                         return;
                       }
-                      // Giriş işlemi
+
+                      // 1. Giriş İşlemi (Email/Şifre Kontrolü)
                       final result = await AuthService().signIn(
-                        email: _emailController.text,
-                        password: _passwordController.text,
+                        email: _emailController.text.trim(),
+                        password: _passwordController.text.trim(),
                       );
+
                       if (result == "success") {
+                        // --- YENİ: MAİL DOĞRULAMA KONTROLÜ BAŞLANGIÇ ---
+                        User? user = FirebaseAuth.instance.currentUser;
+
+                        if (user != null && !user.emailVerified) {
+                          // Eğer mail onaylı DEĞİLSE:
+                          await FirebaseAuth.instance.signOut(); // Hemen çıkış yap (İçeri alma)
+
+                          if (mounted) {
+                            showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text("Mail Doğrulanmadı ⚠️"),
+                                content: const Text("Giriş yapabilmek için lütfen mail adresinize gönderilen doğrulama linkine tıklayın."),
+                                actions: [
+                                  TextButton(
+                                      onPressed: () async {
+                                        // Linki tekrar gönder
+                                        try {
+                                          await user.sendEmailVerification();
+                                          if (mounted) {
+                                            Navigator.pop(context);
+                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Link tekrar gönderildi! Mailinizi kontrol edin."), backgroundColor: Colors.green));
+                                          }
+                                        } catch (e) {
+                                          // Çok sık basarsa hata verebilir
+                                          Navigator.pop(context);
+                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Biraz bekleyip tekrar deneyin."), backgroundColor: Colors.orange));
+                                        }
+                                      },
+                                      child: const Text("Linki Tekrar Gönder")
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.pop(context),
+                                    child: const Text("Tamam"),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+                          return; // Fonksiyondan çık (HomePage'e gitme)
+                        }
+                        // --- MAİL DOĞRULAMA KONTROLÜ BİTİŞ ---
+
+                        // Mail onaylıysa Ana Sayfaya git
                         if (mounted) {
                           Navigator.pushReplacement(
                             context,
-                                MaterialPageRoute(builder: (context) => HomePage()), // const YOK
-
+                            MaterialPageRoute(builder: (context) => const HomePage()),
                           );
                         }
                       } else {
+                        // Giriş hatalıysa (Şifre yanlış vs.)
                         if (mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text(result)),
+                            SnackBar(content: Text(result), backgroundColor: Colors.red),
                           );
                         }
                       }
@@ -220,7 +265,7 @@ class _LoginPageState extends State<LoginPage> {
         return AlertDialog(
           title: const Text("Şifre Sıfırlama"),
           content: Column(
-            mainAxisSize: MainAxisSize.min, // İçerik kadar yer kapla
+            mainAxisSize: MainAxisSize.min,
             children: [
               const Text("Mail adresinizi girin, size sıfırlama bağlantısı gönderelim."),
               const SizedBox(height: 10),
@@ -234,12 +279,10 @@ class _LoginPageState extends State<LoginPage> {
             ],
           ),
           actions: [
-            // İptal Butonu
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: const Text("İptal", style: TextStyle(color: Colors.grey)),
             ),
-            // Gönder Butonu
             TextButton(
               onPressed: () async {
                 if (resetEmailController.text.isEmpty) {
@@ -247,8 +290,7 @@ class _LoginPageState extends State<LoginPage> {
                   return;
                 }
 
-                // Servisi Çağır
-                Navigator.pop(context); // Pencereyi kapat
+                Navigator.pop(context);
 
                 final result = await AuthService().resetPassword(resetEmailController.text);
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'home_page.dart';
+// import 'home_page.dart'; // Artık direkt Home'a gitmediğimiz için buna gerek kalmayabilir ama dursun.
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -21,8 +21,33 @@ class _RegisterPageState extends State<RegisterPage> {
 
   // KAYIT OL FONKSİYONU
   Future<void> _register() async {
-    // 1. Şifre Kontrolü
-    if (_passwordController.text != _confirmPasswordController.text) {
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
+    String confirmPassword = _confirmPasswordController.text.trim();
+    String name = _nameController.text.trim();
+
+    // 1. Boş Alan Kontrolü
+    if (name.isEmpty || email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Lütfen tüm alanları doldurun!"), backgroundColor: Colors.orange));
+      return;
+    }
+
+    // --- YENİ: EDU MAİL KONTROLÜ 🎓 ---
+    // Eğer mail adresi .edu veya .edu.tr ile bitmiyorsa işlemi durdur.
+    if (!email.endsWith('.edu.tr') && !email.endsWith('.edu')) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Sadece öğrenci maili (.edu veya .edu.tr) ile kayıt olabilirsiniz!"),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+          )
+      );
+      return;
+    }
+    // ----------------------------------
+
+    // 2. Şifre Eşleşme Kontrolü
+    if (password != confirmPassword) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Şifreler eşleşmiyor!"), backgroundColor: Colors.red));
       return;
     }
@@ -32,46 +57,56 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
-      // 2. Kullanıcıyı Firebase Auth'da oluştur
+      // 3. Kullanıcıyı Firebase Auth'da oluştur
       UserCredential userCredential = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+        email: email,
+        password: password,
       );
 
-      // 3. Kullanıcı Bilgilerini Firestore'a Kaydet (TAM DONANIMLI)
-      String uid = userCredential.user!.uid;
+      // --- YENİ: DOĞRULAMA MAİLİ GÖNDER 📨 ---
+      User? user = userCredential.user;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+      }
+
+      // 4. Kullanıcı Bilgilerini Firestore'a Kaydet
+      String uid = user!.uid;
 
       await FirebaseFirestore.instance.collection('users').doc(uid).set({
         'uid': uid,
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
+        'name': name,
+        'email': email,
         'created_at': FieldValue.serverTimestamp(),
-
-        // --- İŞTE EKSİK OLAN PARÇALAR BURADA BAŞLIYOR ---
-
-        // 1. Satın alınan ürün sayısı (0 olarak başlatıyoruz)
         'products_bought_count': 0,
-
-        // 2. Cinsiyet (Varsayılan Erkek, sonra profilden değiştirebilir)
-        'gender': 'Erkek',
-
-        // 3. Profil Resmi (Boş başlatıyoruz, kod otomatik ikon atayacak)
+        'gender': 'Erkek', // Varsayılan
         'profile_image': '',
-
-        // 4. Okul Bilgileri (Boş başlatıyoruz)
         'collage_name': '',
         'campüs': '',
       });
 
-      // 4. Başarılı ise Ana Sayfaya Git
+      // 5. Başarılı İşlem Sonrası Diyalog
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Kayıt başarılı! Hoş geldin 🎉"), backgroundColor: Colors.green));
+        // Otomatik girişi engellemek için çıkış yapıyoruz
+        await FirebaseAuth.instance.signOut();
 
-        // Tüm önceki sayfaları silip Home'a git (Geri tuşuna basınca login'e dönmesin)
-        Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-              (route) => false,
+        showDialog(
+          context: context,
+          barrierDismissible: false, // Boşluğa basınca kapanmasın
+          builder: (context) => AlertDialog(
+            title: const Text("Doğrulama Maili Gönderildi 📨"),
+            content: const Text(
+              "Kayıt işlemi başarılı! 🎉\n\nGüvenlik nedeniyle, lütfen mail kutunuzu (Spam klasörü dahil) kontrol edin ve gönderdiğimiz linke tıklayarak hesabınızı doğrulayın.\n\nDoğruladıktan sonra giriş yapabilirsiniz.",
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Dialogu kapat
+                  Navigator.pop(context); // Register sayfasını kapat (Login'e dön)
+                },
+                child: const Text("Tamam, Anladım", style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFF4A148C))),
+              ),
+            ],
+          ),
         );
       }
 
@@ -109,8 +144,14 @@ class _RegisterPageState extends State<RegisterPage> {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.person_add, size: 80, color: Color(0xFF4A148C)),
+              const Icon(Icons.school, size: 80, color: Color(0xFF4A148C)), // İkonu okul yaptık :)
               const SizedBox(height: 20),
+
+              const Text(
+                "Sadece .edu ve .edu.tr mailleri kabul edilir.",
+                style: TextStyle(color: Colors.grey, fontSize: 12),
+              ),
+              const SizedBox(height: 10),
 
               // İsim Alanı
               TextField(
@@ -128,7 +169,8 @@ class _RegisterPageState extends State<RegisterPage> {
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: InputDecoration(
-                  labelText: "Email",
+                  labelText: "Öğrenci Email",
+                  hintText: "ornek@beykent.edu.tr",
                   prefixIcon: const Icon(Icons.email),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
