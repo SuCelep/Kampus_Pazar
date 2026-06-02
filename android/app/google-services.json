@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "900708715140",
+    "project_id": "kampus-pazar-12846",
+    "storage_bucket": "kampus-pazar-12846.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:900708715140:android:0d28df3fd164655a1b50d1",
+        "android_client_info": {
+          "package_name": "com.cagla.kampus_pazar"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDB9YShLHnpY_PviWzZZK3ZOWZp3nW0DI4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
