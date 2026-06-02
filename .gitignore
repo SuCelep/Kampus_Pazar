@@ -12,3 +12,4 @@ build/
 **/ios/.symlinks
 **/ios/Flutter/Flutter.framework
 **/ios/Flutter/Generated.xcconfig
+pubspec.lock
